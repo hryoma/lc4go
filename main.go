@@ -4,77 +4,77 @@ import (
 	"fmt"
 	"github.com/chzyer/readline"
 	"github.com/hryoma/lc4go/emulator"
-	"github.com/hryoma/lc4go/tokenizer"
+	"github.com/hryoma/lc4go/machine"
 	"github.com/spf13/cobra"
 	"strings"
 )
 
-var initOptInput, initOptOutput string
-
 func fInitLc4(cmd *cobra.Command, args []string) {
 	fmt.Println("lc4")
-	fmt.Println(args)
+	emulator.InitLc4(&lc4)
 }
 
 func fBreakpoint(cmd *cobra.Command, args []string) {
 	fmt.Println("breakpoint / b")
-	fmt.Println(args)
+	emulator.Breakpoint(&lc4)
 }
 
 func fContinue(cmd *cobra.Command, args []string) {
 	fmt.Println("continue / c")
-	fmt.Println(args)
+	emulator.Continue(&lc4)
 }
 
 func fLoad(cmd *cobra.Command, args []string) {
 	fmt.Println("load / l")
-	fmt.Println(args)
+	emulator.Load(&lc4)
 }
 
 func fNext(cmd *cobra.Command, args []string) {
 	fmt.Println("next / n")
-	fmt.Println(args)
+	emulator.Next(&lc4)
 }
 
 func fPrint(cmd *cobra.Command, args []string) {
 	fmt.Println("print / p")
-	fmt.Println(args)
+	emulator.Print(&lc4)
 }
 
 func fPrintCode(cmd *cobra.Command, args []string) {
 	fmt.Println("print / p -c")
-	fmt.Println(args)
+	emulator.PrintCode(&lc4)
 }
 
 func fPrintMem(cmd *cobra.Command, args []string) {
 	fmt.Println("print / p -m")
-	fmt.Println(args)
+	emulator.PrintMem(&lc4)
 }
 
 func fPrintNzp(cmd *cobra.Command, args []string) {
 	fmt.Println("print / p -n")
-	fmt.Println(args)
+	emulator.PrintNzp(&lc4)
 }
 
 func fPrintReg(cmd *cobra.Command, args []string) {
 	fmt.Println("print / p -r")
-	fmt.Println(args)
+	emulator.PrintReg(&lc4)
 }
 
 func fRun(cmd *cobra.Command, args []string) {
 	fmt.Println("run / r")
-	fmt.Println(args)
+	emulator.Run(&lc4)
 }
 
 func fReset(cmd *cobra.Command, args []string) {
 	fmt.Println("reset")
-	fmt.Println(args)
+	emulator.Reset(&lc4)
 }
 
 func fStep(cmd *cobra.Command, args []string) {
 	fmt.Println("step / s")
-	fmt.Println(args)
+	emulator.Step(&lc4)
 }
+
+var initOptInput, initOptOutput string
 
 var breakpointCmd = &cobra.Command{
 	Use:     "breakpoint",
@@ -158,8 +158,18 @@ var stepCmd = &cobra.Command{
 	Run:     fStep,
 }
 
+var lc4 machine.Machine
+
+func init() {
+	fmt.Println("init")
+	lc4.Pc = 20
+}
+
 func main() {
 	fmt.Println("LC4 ISA Emulator")
+
+	// initialize state
+	emulator.InitLc4(&lc4)
 
 	// register commands
 	var rootCmd = &cobra.Command{}
@@ -175,9 +185,6 @@ func main() {
 	rootCmd.AddCommand(resetCmd)
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(stepCmd)
-
-	// load input file
-	tokenizer.Tokenize()
 
 	// initialize shell
 	shell, err := readline.NewEx(&readline.Config{
@@ -203,6 +210,5 @@ func main() {
 
 		rootCmd.SetArgs(args)
 		rootCmd.Execute()
-		emulator.Emulate()
 	}
 }

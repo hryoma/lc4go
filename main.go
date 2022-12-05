@@ -35,7 +35,15 @@ var loadCmd = &cobra.Command{
 	Aliases: []string{"l"},
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("load / l")
-		emulator.Load(&lc4)
+		fileName, err := cmd.Flags().GetString("obj")
+		if err != nil {
+			fmt.Println("err")
+			fmt.Println(err)
+		} else {
+			fmt.Printf("obj file: %s\n", fileName)
+			fmt.Println(args)
+			emulator.Load(&lc4, fileName)
+		}
 	},
 }
 
@@ -145,6 +153,7 @@ func main() {
 	rootCmd.AddCommand(breakpointCmd)
 	rootCmd.AddCommand(continueCmd)
 	rootCmd.AddCommand(loadCmd)
+	loadCmd.Flags().StringP("obj", "b", "", "Input object file path")
 	rootCmd.AddCommand(nextCmd)
 	rootCmd.AddCommand(printCmd)
 	printCmd.AddCommand(printCodeCmd)

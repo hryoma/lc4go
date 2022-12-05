@@ -34,18 +34,11 @@ func Continue(lc4 *machine.Machine) {
 	}
 }
 
-func Load(lc4 *machine.Machine) {
+func Load(lc4 *machine.Machine, fileName string) {
 	fmt.Println("load / l")
 
-	// make sure everything is reset by calling init
-
-	// read file, make sure it exists
-
-	// load input file
-	tokenizer.Tokenize()
-
-	// set machine state
-
+	InitLc4(lc4)
+	tokenizer.TokenizeObj(lc4, fileName)
 }
 
 func Next(lc4 *machine.Machine) {

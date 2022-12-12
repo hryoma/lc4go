@@ -4,43 +4,45 @@ const CODE_SIZE = 65536
 const MEM_SIZE = 65536
 const NUM_REGS = 8
 
+type Op int
+
 const (
-	OpNOP		= iota
-	OpBRp		= iota
-	OpBRz		= iota
-	OpBRzp		= iota
-	OpBRn		= iota
-	OpBRnp		= iota
-	OpBRnz		= iota
-	OpBRnzp		= iota
-	OpADD		= iota
-	OpMUL		= iota
-	OpSUB		= iota
-	OpDIV		= iota
-	OpADDI		= iota
-	OpCMP		= iota
-	OpCMPU		= iota
-	OpCMPI		= iota
-	OpCMPIU		= iota
-	OpJSRR		= iota
-	OpJSR		= iota
-	OpAND		= iota
-	OpNOT		= iota
-	OpOR		= iota
-	OpXOR		= iota
-	OpANDI		= iota
-	OpLDR		= iota
-	OpSTR		= iota
-	OpRTI		= iota
-	OpCONST		= iota
-	OpSLL		= iota
-	OpSRA		= iota
-	OpSRL		= iota
-	OpMOD		= iota
-	OpJMPR		= iota
-	OpJMP		= iota
-	OpHICONST	= iota
-	OpTRAP		= iota
+	OpNOP Op = iota
+	OpBRp
+	OpBRz
+	OpBRzp
+	OpBRn
+	OpBRnp
+	OpBRnz
+	OpBRnzp
+	OpADD
+	OpMUL
+	OpSUB
+	OpDIV
+	OpADDI
+	OpCMP
+	OpCMPU
+	OpCMPI
+	OpCMPIU
+	OpJSRR
+	OpJSR
+	OpAND
+	OpNOT
+	OpOR
+	OpXOR
+	OpANDI
+	OpLDR
+	OpSTR
+	OpRTI
+	OpCONST
+	OpSLL
+	OpSRA
+	OpSRL
+	OpMOD
+	OpJMPR
+	OpJMP
+	OpHICONST
+	OpTRAP
 	// psuedo instructions
 	OpRET
 	OpLEA

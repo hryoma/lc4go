@@ -4,10 +4,10 @@ import (
 	"fmt"
 	// "log"
 	"os"
-	"github.com/hryoma/lc4go/machine"
+	// "github.com/hryoma/lc4go/machine"
 )
 
-func TokenizeObj(lc4 *machine.Machine, fileName string) {
+func TokenizeObj(fileName string) {
 	file, err := os.Open(fileName)
 	if err != nil {
 		// log.Fatal(err)

@@ -25,3 +25,4 @@ func TestGetSignExtNNeg(t *testing.T) {
 		t.Error("Sign extension failed for negative int. Expected", expected, "but got", actual)
 	}
 }
+

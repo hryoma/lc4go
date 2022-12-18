@@ -9,7 +9,7 @@ import (
 func InitLc4() {
 	machine.Lc4.Code = [machine.CODE_SIZE]machine.Insn{}
 	machine.Lc4.Mem = [machine.MEM_SIZE]uint16{}
-	machine.Lc4.Reg = [machine.NUM_REGS]int16{}
+	machine.Lc4.Reg = [machine.NUM_REGS]uint16{}
 	machine.Lc4.Nzp = 0
 	machine.Lc4.Pc = 0
 	machine.Lc4.Psr = 1

@@ -52,6 +52,9 @@ const (
 type Insn struct {
 	Data		uint16
 	Op			Op
+	Rd			uint8
+	Rs			uint8
+	Rt			uint8
 	String		string
 	Breakpoint	bool
 }
@@ -59,7 +62,7 @@ type Insn struct {
 type Machine struct {
 	Code	[CODE_SIZE]Insn
 	Mem		[MEM_SIZE]uint16
-	Reg		[NUM_REGS]int16
+	Reg		[NUM_REGS]uint16
 	Nzp		int8
 	Psr		uint16
 	Pc		uint16
@@ -68,7 +71,7 @@ type Machine struct {
 
 var Lc4 Machine
 
-func getSignExtN(data uint16, nBits uint16) (signExtData uint16) {
+func signExtN(data uint16, nBits uint16) (signExtData uint16) {
 	// get the sign and generate a mask
 	var sign uint16 = data & (1 << (nBits - 1))
 	var mask uint16 = (0xFF << nBits)
@@ -81,6 +84,19 @@ func getSignExtN(data uint16, nBits uint16) (signExtData uint16) {
 	}
 
 	return
+}
+
+func setNzp(testVal int16) {
+	// reset nzp bits to 0's
+	Lc4.Psr &= 0xFFF8
+
+	if testVal < 0 {
+		Lc4.Psr |= 0b0100
+	} else if testVal == 0 {
+		Lc4.Psr |= 0b0010
+	} else {
+		Lc4.Psr |= 0b0001
+	}
 }
 
 func Execute() (err int) {
@@ -105,173 +121,202 @@ func Execute() (err int) {
 			Lc4.Pc += 1
 		case OpBRp:
 			// if P, PC = PC + 1 + sext(IMM9)
+			Lc4.Pc += 1
 			if Lc4.Nzp > 0 {
-				Lc4.Pc += 1
-				Lc4.Pc = uint16(int32(Lc4.Pc) + int32(getSignExtN(insn.Data, 9)))
+				Lc4.Pc = uint16(int32(Lc4.Pc) + int32(signExtN(insn.Data, 9)))
 			}
 		case OpBRz:
 			// if Z, PC = PC + 1 + sext(IMM9)
+			Lc4.Pc += 1
 			if Lc4.Nzp == 0 {
-				Lc4.Pc += 1
-				Lc4.Pc = uint16(int32(Lc4.Pc) + int32(getSignExtN(insn.Data, 9)))
+				Lc4.Pc = uint16(int32(Lc4.Pc) + int32(signExtN(insn.Data, 9)))
 			}
 		case OpBRzp:
 			// if Z/P, PC = PC + 1 + sext(IMM9)
+			Lc4.Pc += 1
 			if Lc4.Nzp >= 0 {
-				Lc4.Pc += 1
-				Lc4.Pc = uint16(int32(Lc4.Pc) + int32(getSignExtN(insn.Data, 9)))
+				Lc4.Pc = uint16(int32(Lc4.Pc) + int32(signExtN(insn.Data, 9)))
 			}
 		case OpBRn:
 			// if N, PC = PC + 1 + sext(IMM9)
+			Lc4.Pc += 1
 			if Lc4.Nzp < 0 {
-				Lc4.Pc += 1
-				Lc4.Pc = uint16(int32(Lc4.Pc) + int32(getSignExtN(insn.Data, 9)))
+				Lc4.Pc = uint16(int32(Lc4.Pc) + int32(signExtN(insn.Data, 9)))
 			}
 		case OpBRnp:
 			// if NP, PC = PC + 1 + sext(IMM9)
+			Lc4.Pc += 1
 			if Lc4.Nzp != 0 {
-				Lc4.Pc += 1
-				Lc4.Pc = uint16(int32(Lc4.Pc) + int32(getSignExtN(insn.Data, 9)))
+				Lc4.Pc = uint16(int32(Lc4.Pc) + int32(signExtN(insn.Data, 9)))
 			}
 		case OpBRnz:
 			// if NZ, PC = PC + 1 + sext(IMM9)
+			Lc4.Pc += 1
 			if Lc4.Nzp <= 0 {
-				Lc4.Pc += 1
-				Lc4.Pc = uint16(int32(Lc4.Pc) + int32(getSignExtN(insn.Data, 9)))
+				Lc4.Pc = uint16(int32(Lc4.Pc) + int32(signExtN(insn.Data, 9)))
 			}
 		case OpBRnzp:
 			// if NZP, PC = PC + 1 + sext(IMM9)
 			Lc4.Pc += 1
-			Lc4.Pc = uint16(int32(Lc4.Pc) + int32(getSignExtN(insn.Data, 9)))
+			Lc4.Pc = uint16(int32(Lc4.Pc) + int32(signExtN(insn.Data, 9)))
 		// arithmetic instructions
 		case OpADD:
 			// Rd = Rs + Rt
-			rd := insn.Data & (0b0111 << 9)
-			rs := insn.Data & (0b0111 << 6)
-			rt := insn.Data & (0b0111)
-			Lc4.Reg[rd] = Lc4.Reg[rs] + Lc4.Reg[rt]
+			Lc4.Reg[insn.Rd] = uint16(int32(Lc4.Reg[insn.Rs]) + int32(Lc4.Reg[insn.Rt]))
+			setNzp(int16(Lc4.Reg[insn.Rd]))
+			Lc4.Pc += 1
 		case OpMUL:
 			// Rd = Rs * Rt
-			rd := insn.Data & (0b0111 << 9)
-			rs := insn.Data & (0b0111 << 6)
-			rt := insn.Data & (0b0111)
-			Lc4.Reg[rd] = Lc4.Reg[rs] * Lc4.Reg[rt]
+			Lc4.Reg[insn.Rd] = uint16(int32(Lc4.Reg[insn.Rs]) * int32(Lc4.Reg[insn.Rt]))
+			setNzp(int16(Lc4.Reg[insn.Rd]))
+			Lc4.Pc += 1
 		case OpSUB:
 			// Rd = Rs - Rt
-			rd := insn.Data & (0b0111 << 9)
-			rs := insn.Data & (0b0111 << 6)
-			rt := insn.Data & (0b0111)
-			Lc4.Reg[rd] = Lc4.Reg[rs] - Lc4.Reg[rt]
+			Lc4.Reg[insn.Rd] = uint16(int32(Lc4.Reg[insn.Rs]) - int32(Lc4.Reg[insn.Rt]))
+			setNzp(int16(Lc4.Reg[insn.Rd]))
+			Lc4.Pc += 1
 		case OpDIV:
 			// Rd = Rs / Rt
-			rd := insn.Data & (0b0111 << 9)
-			rs := insn.Data & (0b0111 << 6)
-			rt := insn.Data & (0b0111)
-			Lc4.Reg[rd] = Lc4.Reg[rs] / Lc4.Reg[rt]
+			Lc4.Reg[insn.Rd] = uint16(int32(Lc4.Reg[insn.Rs]) / int32(Lc4.Reg[insn.Rt]))
+			setNzp(int16(Lc4.Reg[insn.Rd]))
+			Lc4.Pc += 1
 			// TODO error handling for div by 0
 		case OpADDI:
 			// Rd = Rs + sext(IMM5)
-			rd := insn.Data & (0b0111 << 9)
-			rs := insn.Data & (0b0111 << 6)
-			imm := getSignExtN(insn.Data, 5)
-			Lc4.Reg[rd] = int16(int32(Lc4.Reg[rs]) + int32(imm))
+			imm := signExtN(insn.Data, 5)
+			Lc4.Reg[insn.Rd] = uint16(int32(Lc4.Reg[insn.Rs]) + int32(imm))
+			setNzp(int16(Lc4.Reg[insn.Rd]))
+			Lc4.Pc += 1
 		case OpMOD:
 			// Rd = Rs % Rt
+			Lc4.Reg[insn.Rd] = uint16(int32(Lc4.Reg[insn.Rs]) % int32(Lc4.Reg[insn.Rt]))
+			setNzp(int16(Lc4.Reg[insn.Rd]))
+			Lc4.Pc += 1
+			// TODO error handling for mod by 0
 		// logical instructions
 		case OpAND:
 			// Rd = Rs & Rt
+			Lc4.Reg[insn.Rd] = Lc4.Reg[insn.Rs] & Lc4.Reg[insn.Rt]
+			setNzp(int16(Lc4.Reg[insn.Rd]))
+			Lc4.Pc += 1
 		case OpNOT:
 			// Rd = ~Rs
+			Lc4.Reg[insn.Rd] = 0xFFFF ^ Lc4.Reg[insn.Rs]
+			setNzp(int16(Lc4.Reg[insn.Rd]))
+			Lc4.Pc += 1
 		case OpOR:
 			// Rd = Rs | Rt
+			Lc4.Reg[insn.Rd] = Lc4.Reg[insn.Rs] | Lc4.Reg[insn.Rt]
+			setNzp(int16(Lc4.Reg[insn.Rd]))
+			Lc4.Pc += 1
 		case OpXOR:
 			// Rd = Rs ^ Rt
+			Lc4.Reg[insn.Rd] = Lc4.Reg[insn.Rs] ^ Lc4.Reg[insn.Rt]
+			setNzp(int16(Lc4.Reg[insn.Rd]))
+			Lc4.Pc += 1
 		case OpANDI:
 			// Rd = Rs & sext(IMM5)
+			imm := signExtN(insn.Data, 5)
+			Lc4.Reg[insn.Rd] = uint16(int32(Lc4.Reg[insn.Rs]) & int32(imm))
+			setNzp(int16(Lc4.Reg[insn.Rd]))
+			Lc4.Pc += 1
 		// mem instructions
 		case OpLDR:
 			// Rd = dmem[Rs + sext(IMM6)]
+			imm := signExtN(insn.Data, 6)
+			Lc4.Reg[insn.Rd] = Lc4.Mem[uint16(int32(insn.Rs) + int32(imm))]
+			setNzp(int16(Lc4.Reg[insn.Rd]))
+			Lc4.Pc += 1
 		case OpSTR:
 			// dmem[Rs + sext(IMM6)] = Rt
+			imm := signExtN(insn.Data, 6)
+			Lc4.Mem[uint16(int32(insn.Rs) + int32(imm))] = Lc4.Reg[insn.Rt]
+			Lc4.Pc += 1
 		case OpCONST:
 			// Rd = sext(IMM9)
+			imm := signExtN(insn.Data, 9)
+			Lc4.Reg[insn.Rd] = uint16(imm)
+			setNzp(int16(Lc4.Reg[insn.Rd]))
+			Lc4.Pc += 1
 		case OpHICONST:
 			// Rd = (Rd & 0xFF) | (UIMM8 << 8)
+			imm := signExtN(insn.Data, 8)
+			Lc4.Reg[insn.Rd] = (Lc4.Reg[insn.Rd] & 0xFF) | (uint16(imm) << 8)
+			setNzp(int16(Lc4.Reg[insn.Rd]))
+			Lc4.Pc += 1
 		// comparison instructions
 		case OpCMP:
 			// NZP = sign(Rs - Rt)
-			rs := insn.Data & (0b0111 << 9)
-			rt := insn.Data & (0b0111)
-			diff := Lc4.Reg[rs] - Lc4.Reg[rt]
-			if diff < 0 {
-				Lc4.Nzp = -1
-			} else if diff == 0 {
-				Lc4.Nzp = 0
-			} else {
-				Lc4.Nzp = 1
-			}
+			diff := int32(Lc4.Reg[insn.Rs]) - int32(Lc4.Reg[insn.Rt])
+			setNzp(int16(diff))
+			Lc4.Pc += 1
 		case OpCMPU:
 			// NZP = sign(uRs - uRt)
-			rs := insn.Data & (0b0111 << 9)
-			rt := insn.Data & (0b0111)
-			diff := int16(uint16(Lc4.Reg[rs]) - uint16(Lc4.Reg[rt]))
-			if diff < 0 {
-				Lc4.Nzp = -1
-			} else if diff == 0 {
-				Lc4.Nzp = 0
-			} else {
-				Lc4.Nzp = 1
-			}
+			diff := int32(Lc4.Reg[insn.Rs] - Lc4.Reg[insn.Rt])
+			setNzp(int16(diff))
+			Lc4.Pc += 1
 		case OpCMPI:
 			// NZP = sign(Rs - IMM7)
-			rs := insn.Data & (0b0111 << 9)
-			imm := getSignExtN(insn.Data, 7)
-			diff := Lc4.Reg[rs] - int16(imm)
-			if diff < 0 {
-				Lc4.Nzp = -1
-			} else if diff == 0 {
-				Lc4.Nzp = 0
-			} else {
-				Lc4.Nzp = 1
-			}
+			imm := signExtN(insn.Data, 7)
+			diff := int32(Lc4.Reg[insn.Rs]) - int32(imm)
+			setNzp(int16(diff))
+			Lc4.Pc += 1
 		case OpCMPIU:
 			// NZP = sign(uRs - UIMM7)
-			rs := insn.Data & (0b0111 << 9)
-			imm := getSignExtN(insn.Data, 7)
-			diff := int16(uint16(Lc4.Reg[rs]) - imm)
-			if diff < 0 {
-				Lc4.Nzp = -1
-			} else if diff == 0 {
-				Lc4.Nzp = 0
-			} else {
-				Lc4.Nzp = 1
-			}
+			imm := signExtN(insn.Data, 7)
+			diff := int32(Lc4.Reg[insn.Rs] - uint16(imm))
+			setNzp(int16(diff))
+			Lc4.Pc += 1
 		// shift instructions
 		case OpSLL:
 			// Rd = Rs << UIMM4
+			imm := 0x0F & insn.Data
+			Lc4.Reg[insn.Rd] = Lc4.Reg[insn.Rs] << imm
+			setNzp(int16(Lc4.Reg[insn.Rd]))
+			Lc4.Pc += 1
 		case OpSRA:
 			// Rd = Rs >>> UIMM4
+			imm := 0x0F & insn.Data
+			Lc4.Reg[insn.Rd] = uint16(int32(Lc4.Reg[insn.Rs]) << 16 >> 16 >> imm)
+			setNzp(int16(Lc4.Reg[insn.Rd]))
+			Lc4.Pc += 1
 		case OpSRL:
 			// Rd = Rs >> UIMM4
+			imm := 0x0F & insn.Data
+			Lc4.Reg[insn.Rd] = Lc4.Reg[insn.Rs] >> imm
+			setNzp(int16(Lc4.Reg[insn.Rd]))
+			Lc4.Pc += 1
 		// jjump instructions
 		case OpJSRR:
 			// R7 = PC + 1; PC = Rs
-			rsVal := Lc4.Reg[insn.Data & (0b0111 << 6)]
-			Lc4.Reg[7] = int16(Lc4.Pc) + 1
-			Lc4.Pc = uint16(rsVal)
+			temp_rs := Lc4.Reg[insn.Rs]
+			Lc4.Reg[7] = Lc4.Pc + 1
+			setNzp(int16(Lc4.Reg[7]))
+			Lc4.Pc = uint16(temp_rs)
 		case OpJSR:
 			// R7 = PC + 1; PC = (PC & 0x8000) | (IMM11 << 4)
-			Lc4.Reg[7] = int16(Lc4.Pc) + 1
-			Lc4.Pc = (Lc4.Pc & 0x8000) | uint16(getSignExtN(insn.Data, 11) << 4)
+			Lc4.Reg[7] = Lc4.Pc + 1
+			setNzp(int16(Lc4.Reg[7]))
+			Lc4.Pc = (Lc4.Pc & 0x8000) | uint16(signExtN(insn.Data, 11) << 4)
 		case OpJMPR:
 			// PC = Rs
+			Lc4.Pc = Lc4.Reg[insn.Rs]
 		case OpJMP:
 			// PC = PC + 1 + sext(IMM11)
+			imm := signExtN(insn.Data, 11)
+			Lc4.Pc = uint16(int32(Lc4.Pc) + 1 + int32(imm))
 		// privilege instructions
 		case OpTRAP:
 			// R7 = PC + 1; PC = (0x8000 | IMM8); PSR[15] = 1
+			imm := signExtN(insn.Data, 8)
+			Lc4.Reg[7] = Lc4.Pc + 1
+			setNzp(int16(Lc4.Reg[7]))
+			Lc4.Pc = (0x8000 | imm)
+			Lc4.Psr |= 0x8000
 		case OpRTI:
 			// PC = R7; PSR[15] = 0
+			Lc4.Pc = Lc4.Reg[7]
+			Lc4.Psr = Lc4.Psr & 0x7FFF
 		// psuedo instructions:
 		case OpRET:
 			// return to R7

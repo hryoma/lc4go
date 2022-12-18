@@ -125,6 +125,7 @@ var resetCmd = &cobra.Command{
 		emulator.Reset()
 	},
 }
+
 var stepCmd = &cobra.Command{
 	Use:     "step",
 	Short:   "Execute one instruction",

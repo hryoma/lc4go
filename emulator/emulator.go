@@ -36,7 +36,8 @@ func Continue() {
 
 func Load(fileName string) {
 	fmt.Println("load / l")
-
+	fmt.Printf("obj file: %s\n", fileName)
+	
 	InitLc4()
 	tokenizer.TokenizeObj(fileName)
 }

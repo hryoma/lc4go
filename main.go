@@ -37,11 +37,8 @@ var loadCmd = &cobra.Command{
 		fmt.Println("load / l")
 		fileName, err := cmd.Flags().GetString("obj")
 		if err != nil {
-			fmt.Println("err")
 			fmt.Println(err)
 		} else {
-			fmt.Printf("obj file: %s\n", fileName)
-			fmt.Println(args)
 			emulator.Load(fileName)
 		}
 	},

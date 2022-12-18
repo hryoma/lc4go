@@ -13,7 +13,7 @@ func readChar(file *os.File) (char byte, err error) {
 	buf := make([]byte, 1)
 	_, err = file.Read(buf)
 	if err != nil {
-		fmt.Println("Could not read word")
+		fmt.Println("Could not read char")
 		return
 	}
 
@@ -26,8 +26,10 @@ func readWord(file *os.File) (word uint16, err error) {
 	buf := make([]byte, 2)
 	_, err = file.Read(buf)
 	if err != nil {
-		fmt.Println("Could not read word")
-		fmt.Println(err)
+		if !errors.Is(err, io.EOF) {
+			fmt.Println("Could not read word")
+			fmt.Println(err)
+		}
 		return
 	}
 
@@ -40,7 +42,6 @@ func readWord(file *os.File) (word uint16, err error) {
 }
 
 func parseCodeBlock(file *os.File) {
-	fmt.Println("code block")
 	// address
 	addr, err := readWord(file)
 	if err != nil {
@@ -170,8 +171,8 @@ func TokenizeObj(fileName string) {
 	for {
 		word, err := readWord(file)
 		if err != nil {
-			// log.Fatal(err)
 			if errors.Is(err, io.EOF) {
+				// EOF
 				err = nil
 			}
 			return

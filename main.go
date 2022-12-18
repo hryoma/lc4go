@@ -24,7 +24,6 @@ var continueCmd = &cobra.Command{
 	Short:   "Continue running the instructions until termination",
 	Aliases: []string{"c"},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("continue / c")
 		emulator.Continue()
 	},
 }
@@ -34,7 +33,6 @@ var loadCmd = &cobra.Command{
 	Short:   "Load a file",
 	Aliases: []string{"l"},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("load / l")
 		fileName, err := cmd.Flags().GetString("obj")
 		if err != nil {
 			fmt.Println(err)
@@ -49,7 +47,6 @@ var nextCmd = &cobra.Command{
 	Short:   "Run until the program counter reaches PC + 1",
 	Aliases: []string{"n"},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("next / n")
 		emulator.Next()
 	},
 }
@@ -59,7 +56,6 @@ var printCmd = &cobra.Command{
 	Short:   "Print register values, NZP bits, code lines, or content in memory",
 	Aliases: []string{"p"},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("print / p")
 		emulator.Print()
 	},
 }
@@ -69,7 +65,6 @@ var printCodeCmd = &cobra.Command{
 	Short:   "Print code lines",
 	Aliases: []string{"c"},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("print / p -c")
 		emulator.PrintCode()
 	},
 }
@@ -79,7 +74,6 @@ var printMemCmd = &cobra.Command{
 	Short:   "Print content in memory",
 	Aliases: []string{"m"},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("print / p -m")
 		emulator.PrintMem()
 	},
 }
@@ -89,7 +83,6 @@ var printNzpCmd = &cobra.Command{
 	Short:   "Print NZP bits",
 	Aliases: []string{"n"},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("print / p -n")
 		emulator.PrintNzp()
 	},
 }
@@ -99,7 +92,6 @@ var printRegCmd = &cobra.Command{
 	Short:   "Print register values",
 	Aliases: []string{"r"},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("print / p -r")
 		emulator.PrintReg()
 	},
 }
@@ -109,7 +101,6 @@ var runCmd = &cobra.Command{
 	Short:   "Run the file from the beginning",
 	Aliases: []string{"r"},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("run / r")
 		emulator.Run()
 	},
 }
@@ -118,7 +109,6 @@ var resetCmd = &cobra.Command{
 	Use:   "reset",
 	Short: "Reset all values to the initial state",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("reset")
 		emulator.Reset()
 	},
 }
@@ -128,7 +118,6 @@ var stepCmd = &cobra.Command{
 	Short:   "Execute one instruction",
 	Aliases: []string{"s"},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("step / s")
 		emulator.Step()
 	},
 }

@@ -1,5 +1,7 @@
 package machine
 
+import ("fmt")
+
 const MEM_SIZE = 65536
 const NUM_REGS = 8
 
@@ -48,15 +50,65 @@ const (
 	OpLC
 )
 
+func (op Op) String() string {
+	return [...]string{
+		"NOP",
+		"BRp",
+		"BRz",
+		"BRzp",
+		"BRn",
+		"BRnp",
+		"BRnz",
+		"BRnzp",
+		"ADD",
+		"MUL",
+		"SUB",
+		"DIV",
+		"ADDI",
+		"CMP",
+		"CMPU",
+		"CMPI",
+		"CMPIU",
+		"JSRR",
+		"JSR",
+		"AND",
+		"NOT",
+		"OR",
+		"XOR",
+		"ANDI",
+		"LDR",
+		"STR",
+		"RTI",
+		"CONST",
+		"SLL",
+		"SRA",
+		"SRL",
+		"MOD",
+		"JMPR",
+		"JMP",
+		"HICONST",
+		"TRAP",
+		"RET",
+		"LEA",
+		"LC",
+	}[op]
+}
+
 type Insn struct {
 	Data		uint16
-	OpName			Op
+	OpName		Op
 	Rd			uint8
 	Rs			uint8
 	Rt			uint8
 	Imm			uint16
 	Name		string
 	Breakpoint	bool
+}
+
+func (insn Insn) String() string {
+	// data
+	// OpName: Rd, Rs, Rt, Imm
+	return fmt.Sprintf("%016b\n%s: R%d, R%d, R%d, %d", insn.Data, insn.OpName, insn.Rd, insn.Rs, insn.Rt, insn.Imm)
 }
 
 type Machine struct {
@@ -241,6 +293,7 @@ func wordToInsn(addr uint16) (insn Insn) {
 	}
 
 	return Insn{
+		Data: Lc4.Mem[addr],
 		OpName: op,
 		Rd: rd,
 		Rs: rs,
@@ -293,6 +346,10 @@ func Execute() (err int) {
 	}
 
 	insn := wordToInsn(Lc4.Pc)
+	if insn.OpName != OpNOP {
+		fmt.Printf("%s\n", insn)
+	}
+
 	switch insn.OpName {
 		// branch instructions
 		case OpNOP:
@@ -503,6 +560,8 @@ func Execute() (err int) {
 			// store address of <Label> in Rd
 		case OpLC:
 			// store value of constant <Label> in Rd
+		default:
+			fmt.Println("Unexpected op code")
 	}
 
 	return 0

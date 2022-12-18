@@ -20,7 +20,6 @@ func Breakpoint() {
 }
 
 func Continue() {
-	fmt.Println("continue / c")
 	for {
 		// TODO store bp's in its own bit mask
 		// if machine.Lc4.Code[machine.Lc4.Pc].Breakpoint {
@@ -35,15 +34,11 @@ func Continue() {
 }
 
 func Load(fileName string) {
-	fmt.Println("load / l")
-	fmt.Printf("obj file: %s\n", fileName)
-	
 	InitLc4()
 	tokenizer.TokenizeObj(fileName)
 }
 
 func Next() {
-	fmt.Println("next / n")
 	nextPc := machine.Lc4.Pc + 1
 	// like continue, but loop over step until pc = pc_curr + 1
 	for {
@@ -63,13 +58,15 @@ func Next() {
 }
 
 func Print() {
-	fmt.Println("print / p")
-	// print current line of code, nzp, pc, reg
+	PrintCode()
+	PrintNzp()
+	PrintReg()
 }
 
 func PrintCode() {
-	fmt.Println("print / p -c")
-	// print code at address
+	pc := machine.Lc4.Pc
+	data := machine.Lc4.Mem[pc]
+	fmt.Printf("%d:\t0b%016b / 0x%04X\n", pc, data, data)
 }
 
 func PrintMem() {
@@ -78,37 +75,52 @@ func PrintMem() {
 }
 
 func PrintNzp() {
-	fmt.Println("print / p -n")
-	// print nzp bits
+	var n, z, p uint8
+
+	if machine.Lc4.Psr & 0b100 != 0 {
+		n = 1
+	}
+	if machine.Lc4.Psr & 0b010 != 0 {
+		z = 1
+	}
+	if machine.Lc4.Psr & 0b001 != 0 {
+		p = 1
+	}
+
+	fmt.Printf("nzp:\t%01b/%01b/%01b\n", n, z, p)
 }
 
 func PrintReg() {
-	fmt.Println("print / p -r")
-	// check if -r has a value
-	// if it doesn't, print all regs
-	// if it does, check that it falls between 0-7
-	// otherwise, error, invalid reg num
+	var regMask uint16 = 0x00FF
+
+	for i := uint16(0); i < 8; i++ {
+		if (regMask >> i) & 1 == 1 {
+			regVal := machine.Lc4.Reg[i]
+			fmt.Printf("\tR%d: %016b / 0x%04X\n", i, regVal, regVal)
+		}
+	}
 }
 
 func Run() {
-	fmt.Println("run / r")
 	// TODO reset machine
 	Continue()
 }
 
 func Reset() {
-	fmt.Println("reset")
 	// call init again, and then load data
 }
 
 func Step() (ok bool) {
-	fmt.Println("step / s")
 	// TODO add check to see if pc in valid address
 	// TODO add check to see if pc is at end
 	if machine.Lc4.Pc == 0x80FF {
 		return false
 	}
 	// then execute once
+	err := machine.Execute()
+	if err != 0 {
+		fmt.Println("execute error")
+	}
 
 	return true
 }

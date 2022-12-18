@@ -100,7 +100,7 @@ type Insn struct {
 	Rd			uint8
 	Rs			uint8
 	Rt			uint8
-	Imm			uint16
+	Imm			int16
 	Name		string
 	Breakpoint	bool
 }
@@ -130,7 +130,7 @@ func wordToInsn(addr uint16) (insn Insn) {
 	var rd uint8
 	var rs uint8
 	var rt uint8
-	var imm uint16
+	var imm int16
 	var name string
 
 	parse_opcode:
@@ -159,7 +159,7 @@ func wordToInsn(addr uint16) (insn Insn) {
 			op = OpBRnzp
 		}
 
-		imm = Lc4.Mem[addr] & 0x01FF
+		imm = signExtN(Lc4.Mem[addr] & 0x01FF, 9)
 	case 0b0001:
 		// arithmetic instructions
 		subOpCode := (word >> 3) & 0b111
@@ -174,7 +174,7 @@ func wordToInsn(addr uint16) (insn Insn) {
 			op = OpDIV
 		default:
 			op = OpADDI
-			imm = Lc4.Mem[addr] & 0x001F
+			imm = signExtN(Lc4.Mem[addr] & 0x001F, 5)
 			break parse_opcode
 		}
 
@@ -200,7 +200,7 @@ func wordToInsn(addr uint16) (insn Insn) {
 			break parse_opcode
 		}
 
-		imm = Lc4.Mem[addr] & 0x000F
+		imm = int16(Lc4.Mem[addr]) & 0x000F
 	case 0b0101:
 		// boolean instructions
 		rd = uint8(Lc4.Mem[addr] >> 9) & 0b0111
@@ -219,7 +219,7 @@ func wordToInsn(addr uint16) (insn Insn) {
 			op = OpXOR
 		default:
 			op = OpANDI
-			imm = Lc4.Mem[addr] & 0x001F
+			imm = signExtN(Lc4.Mem[addr] & 0x001F, 5)
 			break parse_opcode
 		}
 
@@ -229,21 +229,23 @@ func wordToInsn(addr uint16) (insn Insn) {
 		op = OpLDR
 		rd = uint8(Lc4.Mem[addr] >> 9) & 0b0111
 		rs = uint8(Lc4.Mem[addr] >> 6) & 0b0111
-		imm = Lc4.Mem[addr] & 0x003F
+		imm = signExtN(Lc4.Mem[addr] & 0x003F, 6)
 	case 0b0111:
 		// STR
 		op = OpSTR
 		rt = uint8(Lc4.Mem[addr] >> 9) & 0b0111
 		rs = uint8(Lc4.Mem[addr] >> 6) & 0b0111
-		imm = Lc4.Mem[addr] & 0x003F
+		imm = signExtN(Lc4.Mem[addr] & 0x003F, 6)
 	case 0b1001:
 		// CONST
+		op = OpCONST
 		rd = uint8(Lc4.Mem[addr] >> 9) & 0b0111
-		imm = Lc4.Mem[addr] & 0x01FF
+		imm = signExtN(Lc4.Mem[addr] & 0x003F, 6)
 	case 0b1101:
 		// HICONST
+		op = OpHICONST
 		rd = uint8(Lc4.Mem[addr] >> 9) & 0b0111
-		imm = Lc4.Mem[addr] & 0x00FF
+		imm = int16(Lc4.Mem[addr]) & 0x003F
 	case 0b0010:
 		// comparison instructions
 		rs = uint8(Lc4.Mem[addr] >> 9) & 0b0111
@@ -258,10 +260,10 @@ func wordToInsn(addr uint16) (insn Insn) {
 			rt = uint8(Lc4.Mem[addr]) & 0b0111
 		case 0b10:
 			op = OpCMPI
-			imm = Lc4.Mem[addr] & 0x00FF
+			imm = signExtN(Lc4.Mem[addr] & 0x00FF, 8)
 		case 0b11:
 			op = OpCMPIU
-			imm = Lc4.Mem[addr] & 0x00FF
+			imm = int16(Lc4.Mem[addr]) & 0x00FF
 		}
 	case 0b0100:
 		// JSRR, JSR
@@ -272,7 +274,7 @@ func wordToInsn(addr uint16) (insn Insn) {
 			rs = uint8(Lc4.Mem[addr] >> 6) & 0b0111
 		case 0b1:
 			op = OpJSR
-			imm = Lc4.Mem[addr] & 0x07FF
+			imm = signExtN(Lc4.Mem[addr] & 0x07FF, 11)
 		}
 	case 0b1100:
 		// JMPR, JMP
@@ -283,13 +285,16 @@ func wordToInsn(addr uint16) (insn Insn) {
 			rs = uint8(Lc4.Mem[addr] >> 6) & 0b0111
 		case 0b1:
 			op = OpJSR
-			imm = Lc4.Mem[addr] & 0x07FF
+			imm = signExtN(Lc4.Mem[addr] & 0x07FF, 11)
 		}
 	case 0b1111:
 		// TRAP
-		imm = Lc4.Mem[addr] & 0x00FF
+		op = OpTRAP
+		imm = int16(Lc4.Mem[addr]) & 0x00FF
 	case 0b1000:
 		// RTI
+		op = OpRTI
+		imm = signExtN(Lc4.Mem[addr] & 0x00FF, 8)
 	}
 
 	return Insn{
@@ -303,19 +308,17 @@ func wordToInsn(addr uint16) (insn Insn) {
 	}
 }
 
-func signExtN(data uint16, nBits uint16) (signExtData uint16) {
+func signExtN(data uint16, nBits uint16) (int16) {
 	// get the sign and generate a mask
 	var sign uint16 = data & (1 << (nBits - 1))
 	var mask uint16 = (0xFF << nBits)
 
 	// sign extend it
 	if sign == 0 {
-		signExtData = data & ^mask
+		return int16(data & ^mask)
 	} else {
-		signExtData = data | mask
+		return int16(data | mask)
 	}
-
-	return
 }
 
 func setNzp(testVal int16) {
@@ -323,12 +326,22 @@ func setNzp(testVal int16) {
 	Lc4.Psr &= 0xFFF8
 
 	if testVal < 0 {
-		Lc4.Psr |= 0b0100
+		Lc4.Psr |= 0b100
 	} else if testVal == 0 {
-		Lc4.Psr |= 0b0010
+		Lc4.Psr |= 0b010
 	} else {
-		Lc4.Psr |= 0b0001
+		Lc4.Psr |= 0b001
 	}
+}
+
+func uintPlusInt(val uint16, offset int16) (res uint16, err int) {
+	var tempRes int32 = int32(val) + int32(offset)
+	if 0 <= tempRes && tempRes <= 0xFFFF {
+		res = uint16(tempRes)
+	} else {
+		err = -1
+	}
+	return
 }
 
 func Execute() (err int) {
@@ -348,6 +361,8 @@ func Execute() (err int) {
 	insn := wordToInsn(Lc4.Pc)
 	if insn.OpName != OpNOP {
 		fmt.Printf("%s\n", insn)
+	} else {
+		fmt.Printf("%s\n", insn)
 	}
 
 	switch insn.OpName {
@@ -359,74 +374,78 @@ func Execute() (err int) {
 			// if P, PC = PC + 1 + sext(IMM9)
 			Lc4.Pc += 1
 			if Lc4.Nzp > 0 {
-				Lc4.Pc = uint16(int32(Lc4.Pc) + int32(signExtN(insn.Data, 9)))
+				Lc4.Pc, err = uintPlusInt(Lc4.Pc, insn.Imm)
 			}
 		case OpBRz:
 			// if Z, PC = PC + 1 + sext(IMM9)
 			Lc4.Pc += 1
 			if Lc4.Nzp == 0 {
-				Lc4.Pc = uint16(int32(Lc4.Pc) + int32(signExtN(insn.Data, 9)))
+				Lc4.Pc, err = uintPlusInt(Lc4.Pc, insn.Imm)
 			}
 		case OpBRzp:
 			// if Z/P, PC = PC + 1 + sext(IMM9)
 			Lc4.Pc += 1
 			if Lc4.Nzp >= 0 {
-				Lc4.Pc = uint16(int32(Lc4.Pc) + int32(signExtN(insn.Data, 9)))
+				Lc4.Pc, err = uintPlusInt(Lc4.Pc, insn.Imm)
 			}
 		case OpBRn:
 			// if N, PC = PC + 1 + sext(IMM9)
 			Lc4.Pc += 1
 			if Lc4.Nzp < 0 {
-				Lc4.Pc = uint16(int32(Lc4.Pc) + int32(signExtN(insn.Data, 9)))
+				Lc4.Pc, err = uintPlusInt(Lc4.Pc, insn.Imm)
 			}
 		case OpBRnp:
 			// if NP, PC = PC + 1 + sext(IMM9)
 			Lc4.Pc += 1
 			if Lc4.Nzp != 0 {
-				Lc4.Pc = uint16(int32(Lc4.Pc) + int32(signExtN(insn.Data, 9)))
+				Lc4.Pc, err = uintPlusInt(Lc4.Pc, insn.Imm)
 			}
 		case OpBRnz:
 			// if NZ, PC = PC + 1 + sext(IMM9)
 			Lc4.Pc += 1
 			if Lc4.Nzp <= 0 {
-				Lc4.Pc = uint16(int32(Lc4.Pc) + int32(signExtN(insn.Data, 9)))
+				Lc4.Pc, err = uintPlusInt(Lc4.Pc, insn.Imm)
 			}
 		case OpBRnzp:
 			// if NZP, PC = PC + 1 + sext(IMM9)
 			Lc4.Pc += 1
-			Lc4.Pc = uint16(int32(Lc4.Pc) + int32(signExtN(insn.Data, 9)))
+			Lc4.Pc, err = uintPlusInt(Lc4.Pc, insn.Imm)
 		// arithmetic instructions
 		case OpADD:
 			// Rd = Rs + Rt
-			Lc4.Reg[insn.Rd] = uint16(int32(Lc4.Reg[insn.Rs]) + int32(Lc4.Reg[insn.Rt]))
-			setNzp(int16(Lc4.Reg[insn.Rd]))
+			calc := int16(Lc4.Reg[insn.Rs]) + int16(Lc4.Reg[insn.Rt])
+			Lc4.Reg[insn.Rd] = uint16(calc)
+			setNzp(calc)
 			Lc4.Pc += 1
 		case OpMUL:
 			// Rd = Rs * Rt
-			Lc4.Reg[insn.Rd] = uint16(int32(Lc4.Reg[insn.Rs]) * int32(Lc4.Reg[insn.Rt]))
-			setNzp(int16(Lc4.Reg[insn.Rd]))
+			calc := int16(Lc4.Reg[insn.Rs]) * int16(Lc4.Reg[insn.Rt])
+			Lc4.Reg[insn.Rd] = uint16(calc)
+			setNzp(calc)
 			Lc4.Pc += 1
 		case OpSUB:
 			// Rd = Rs - Rt
-			Lc4.Reg[insn.Rd] = uint16(int32(Lc4.Reg[insn.Rs]) - int32(Lc4.Reg[insn.Rt]))
-			setNzp(int16(Lc4.Reg[insn.Rd]))
+			calc := int16(Lc4.Reg[insn.Rs]) - int16(Lc4.Reg[insn.Rt])
+			Lc4.Reg[insn.Rd] = uint16(calc)
+			setNzp(calc)
 			Lc4.Pc += 1
 		case OpDIV:
 			// Rd = Rs / Rt
-			Lc4.Reg[insn.Rd] = uint16(int32(Lc4.Reg[insn.Rs]) / int32(Lc4.Reg[insn.Rt]))
-			setNzp(int16(Lc4.Reg[insn.Rd]))
+			calc := int16(Lc4.Reg[insn.Rs]) / int16(Lc4.Reg[insn.Rt])
+			Lc4.Reg[insn.Rd] = uint16(calc)
+			setNzp(calc)
 			Lc4.Pc += 1
 			// TODO error handling for div by 0
 		case OpADDI:
 			// Rd = Rs + sext(IMM5)
-			imm := signExtN(insn.Data, 5)
-			Lc4.Reg[insn.Rd] = uint16(int32(Lc4.Reg[insn.Rs]) + int32(imm))
+			Lc4.Reg[insn.Rd] = uint16(int16(Lc4.Reg[insn.Rs]) + insn.Imm)
 			setNzp(int16(Lc4.Reg[insn.Rd]))
 			Lc4.Pc += 1
 		case OpMOD:
 			// Rd = Rs % Rt
-			Lc4.Reg[insn.Rd] = uint16(int32(Lc4.Reg[insn.Rs]) % int32(Lc4.Reg[insn.Rt]))
-			setNzp(int16(Lc4.Reg[insn.Rd]))
+			calc := int16(Lc4.Reg[insn.Rs]) % int16(Lc4.Reg[insn.Rt])
+			Lc4.Reg[insn.Rd] = uint16(calc)
+			setNzp(calc)
 			Lc4.Pc += 1
 			// TODO error handling for mod by 0
 		// logical instructions
@@ -452,74 +471,60 @@ func Execute() (err int) {
 			Lc4.Pc += 1
 		case OpANDI:
 			// Rd = Rs & sext(IMM5)
-			imm := signExtN(insn.Data, 5)
-			Lc4.Reg[insn.Rd] = uint16(int32(Lc4.Reg[insn.Rs]) & int32(imm))
+			Lc4.Reg[insn.Rd] = uint16(int16(Lc4.Reg[insn.Rs]) & insn.Imm)
 			setNzp(int16(Lc4.Reg[insn.Rd]))
 			Lc4.Pc += 1
 		// mem instructions
 		case OpLDR:
 			// Rd = dmem[Rs + sext(IMM6)]
-			imm := signExtN(insn.Data, 6)
-			Lc4.Reg[insn.Rd] = Lc4.Mem[uint16(int32(insn.Rs) + int32(imm))]
+			Lc4.Reg[insn.Rd] = Lc4.Mem[uint16(int16(insn.Rs) + insn.Imm)]
 			setNzp(int16(Lc4.Reg[insn.Rd]))
 			Lc4.Pc += 1
 		case OpSTR:
 			// dmem[Rs + sext(IMM6)] = Rt
-			imm := signExtN(insn.Data, 6)
-			Lc4.Mem[uint16(int32(insn.Rs) + int32(imm))] = Lc4.Reg[insn.Rt]
+			Lc4.Mem[uint16(int16(insn.Rs) + insn.Imm)] = Lc4.Reg[insn.Rt]
 			Lc4.Pc += 1
 		case OpCONST:
 			// Rd = sext(IMM9)
-			imm := signExtN(insn.Data, 9)
-			Lc4.Reg[insn.Rd] = uint16(imm)
+			Lc4.Reg[insn.Rd] = uint16(insn.Imm)
 			setNzp(int16(Lc4.Reg[insn.Rd]))
 			Lc4.Pc += 1
 		case OpHICONST:
 			// Rd = (Rd & 0xFF) | (UIMM8 << 8)
-			imm := signExtN(insn.Data, 8)
-			Lc4.Reg[insn.Rd] = (Lc4.Reg[insn.Rd] & 0xFF) | (uint16(imm) << 8)
+			Lc4.Reg[insn.Rd] = (Lc4.Reg[insn.Rd] & 0xFF) | (uint16(insn.Imm) << 8)
 			setNzp(int16(Lc4.Reg[insn.Rd]))
 			Lc4.Pc += 1
 		// comparison instructions
 		case OpCMP:
 			// NZP = sign(Rs - Rt)
-			diff := int32(Lc4.Reg[insn.Rs]) - int32(Lc4.Reg[insn.Rt])
-			setNzp(int16(diff))
+			setNzp(int16(Lc4.Reg[insn.Rs]) - int16(Lc4.Reg[insn.Rt]))
 			Lc4.Pc += 1
 		case OpCMPU:
 			// NZP = sign(uRs - uRt)
-			diff := int32(Lc4.Reg[insn.Rs] - Lc4.Reg[insn.Rt])
-			setNzp(int16(diff))
+			setNzp(int16(Lc4.Reg[insn.Rs] - Lc4.Reg[insn.Rt]))
 			Lc4.Pc += 1
 		case OpCMPI:
 			// NZP = sign(Rs - IMM7)
-			imm := signExtN(insn.Data, 7)
-			diff := int32(Lc4.Reg[insn.Rs]) - int32(imm)
-			setNzp(int16(diff))
+			setNzp(int16(Lc4.Reg[insn.Rs]) - insn.Imm)
 			Lc4.Pc += 1
 		case OpCMPIU:
 			// NZP = sign(uRs - UIMM7)
-			imm := signExtN(insn.Data, 7)
-			diff := int32(Lc4.Reg[insn.Rs] - uint16(imm))
-			setNzp(int16(diff))
+			setNzp(int16(Lc4.Reg[insn.Rs] - uint16(insn.Imm)))
 			Lc4.Pc += 1
 		// shift instructions
 		case OpSLL:
 			// Rd = Rs << UIMM4
-			imm := 0x0F & insn.Data
-			Lc4.Reg[insn.Rd] = Lc4.Reg[insn.Rs] << imm
+			Lc4.Reg[insn.Rd] = Lc4.Reg[insn.Rs] << insn.Imm
 			setNzp(int16(Lc4.Reg[insn.Rd]))
 			Lc4.Pc += 1
 		case OpSRA:
 			// Rd = Rs >>> UIMM4
-			imm := 0x0F & insn.Data
-			Lc4.Reg[insn.Rd] = uint16(int32(Lc4.Reg[insn.Rs]) << 16 >> 16 >> imm)
+			Lc4.Reg[insn.Rd] = uint16(int32(Lc4.Reg[insn.Rs]) << 16 >> 16 >> insn.Imm)
 			setNzp(int16(Lc4.Reg[insn.Rd]))
 			Lc4.Pc += 1
 		case OpSRL:
 			// Rd = Rs >> UIMM4
-			imm := 0x0F & insn.Data
-			Lc4.Reg[insn.Rd] = Lc4.Reg[insn.Rs] >> imm
+			Lc4.Reg[insn.Rd] = Lc4.Reg[insn.Rs] >> insn.Imm
 			setNzp(int16(Lc4.Reg[insn.Rd]))
 			Lc4.Pc += 1
 		// jjump instructions
@@ -533,21 +538,20 @@ func Execute() (err int) {
 			// R7 = PC + 1; PC = (PC & 0x8000) | (IMM11 << 4)
 			Lc4.Reg[7] = Lc4.Pc + 1
 			setNzp(int16(Lc4.Reg[7]))
-			Lc4.Pc = (Lc4.Pc & 0x8000) | uint16(signExtN(insn.Data, 11) << 4)
+			Lc4.Pc = (Lc4.Pc & 0x8000) | (uint16(insn.Imm) << 4)
 		case OpJMPR:
 			// PC = Rs
 			Lc4.Pc = Lc4.Reg[insn.Rs]
 		case OpJMP:
 			// PC = PC + 1 + sext(IMM11)
-			imm := signExtN(insn.Data, 11)
-			Lc4.Pc = uint16(int32(Lc4.Pc) + 1 + int32(imm))
+			Lc4.Pc += 1
+			Lc4.Pc, err = uintPlusInt(Lc4.Pc, insn.Imm)
 		// privilege instructions
 		case OpTRAP:
 			// R7 = PC + 1; PC = (0x8000 | IMM8); PSR[15] = 1
-			imm := signExtN(insn.Data, 8)
 			Lc4.Reg[7] = Lc4.Pc + 1
 			setNzp(int16(Lc4.Reg[7]))
-			Lc4.Pc = (0x8000 | imm)
+			Lc4.Pc = 0x8000 | uint16(insn.Imm)
 			Lc4.Psr |= 0x8000
 		case OpRTI:
 			// PC = R7; PSR[15] = 0

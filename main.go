@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/chzyer/readline"
 	"github.com/hryoma/lc4go/emulator"
-	"github.com/hryoma/lc4go/machine"
 	"github.com/spf13/cobra"
 	"strings"
 )
@@ -122,19 +121,13 @@ var stepCmd = &cobra.Command{
 	},
 }
 
+var rootCmd = &cobra.Command{}
+
 func init() {
-	fmt.Println("init")
-	machine.Lc4.Pc = 20
-}
-
-func main() {
-	fmt.Println("LC4 ISA Emulator")
-
 	// initialize state
 	emulator.InitLc4()
 
 	// register commands
-	var rootCmd = &cobra.Command{}
 	rootCmd.AddCommand(breakpointCmd)
 	rootCmd.AddCommand(continueCmd)
 	rootCmd.AddCommand(loadCmd)
@@ -148,6 +141,10 @@ func main() {
 	rootCmd.AddCommand(resetCmd)
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(stepCmd)
+}
+
+func main() {
+	fmt.Println("LC4 ISA Emulator")
 
 	// initialize shell
 	shell, err := readline.NewEx(&readline.Config{

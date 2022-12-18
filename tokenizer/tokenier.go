@@ -1,8 +1,10 @@
 package tokenizer
 
 import (
+	"errors"
 	"fmt"
 	// "log"
+	"io"
 	"os"
 	"github.com/hryoma/lc4go/machine"
 )
@@ -25,6 +27,7 @@ func readWord(file *os.File) (word uint16, err error) {
 	_, err = file.Read(buf)
 	if err != nil {
 		fmt.Println("Could not read word")
+		fmt.Println(err)
 		return
 	}
 
@@ -32,12 +35,12 @@ func readWord(file *os.File) (word uint16, err error) {
 	byte1 := buf[0]
 	byte2 := buf[1]
 
-	word = uint16((byte1 << 8) + byte2)
-
+	word = (uint16(byte1) << 8) + uint16(byte2)
 	return
 }
 
 func parseCodeBlock(file *os.File) {
+	fmt.Println("code block")
 	// address
 	addr, err := readWord(file)
 	if err != nil {
@@ -73,6 +76,8 @@ func parseDataBlock(file *os.File) {
 	if err != nil {
 		return
 	}
+
+	fmt.Println(addr, num)
 
 	// read words
 	for i := uint16(0); i < num; i++ {
@@ -148,9 +153,16 @@ func parseLineNumber(file *os.File) {
 }
 
 func TokenizeObj(fileName string) {
-	file, err := os.Open(fileName)
+	wd, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error getting current working directory")
+		return
+	}
+	filePath := wd + fileName
+	file, err := os.Open(filePath)
 	if err != nil {
 		// log.Fatal(err)
+		fmt.Println("File not found: ", filePath)
 		return
 	}
 	defer file.Close()
@@ -159,7 +171,9 @@ func TokenizeObj(fileName string) {
 		word, err := readWord(file)
 		if err != nil {
 			// log.Fatal(err)
-			fmt.Println("")
+			if errors.Is(err, io.EOF) {
+				err = nil
+			}
 			return
 		}
 
@@ -174,6 +188,10 @@ func TokenizeObj(fileName string) {
 			parseFileName(file)
 		case 0x715E:
 			parseLineNumber(file)
+		default:
+			fmt.Println("Invalid file format")
+			fmt.Println(word)
+			return
 		}
 	}
 }

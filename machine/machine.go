@@ -1,6 +1,5 @@
 package machine
 
-const CODE_SIZE = 65536
 const MEM_SIZE = 65536
 const NUM_REGS = 8
 
@@ -51,16 +50,16 @@ const (
 
 type Insn struct {
 	Data		uint16
-	Op			Op
+	OpName			Op
 	Rd			uint8
 	Rs			uint8
 	Rt			uint8
-	String		string
+	Imm			uint16
+	Name		string
 	Breakpoint	bool
 }
 
 type Machine struct {
-	Code	[CODE_SIZE]Insn
 	Mem		[MEM_SIZE]uint16
 	Reg		[NUM_REGS]uint16
 	Nzp		int8
@@ -70,6 +69,186 @@ type Machine struct {
 }
 
 var Lc4 Machine
+
+func wordToInsn(addr uint16) (insn Insn) {
+	word := Lc4.Mem[addr]
+	opCode := word >> 12
+
+	var op Op
+	var rd uint8
+	var rs uint8
+	var rt uint8
+	var imm uint16
+	var name string
+
+	parse_opcode:
+	switch opCode {
+	case 0b0000:
+		// branch instructions
+		subOpCode := (word >> 9) & 0b111
+
+		switch subOpCode {
+		case 0b000:
+			op = OpNOP
+			break parse_opcode
+		case 0b001:
+			op = OpBRp
+		case 0b010:
+			op = OpBRz
+		case 0b011:
+			op = OpBRzp
+		case 0b100:
+			op = OpBRn
+		case 0b101:
+			op = OpBRnp
+		case 0b110:
+			op = OpBRnz
+		case 0b111:
+			op = OpBRnzp
+		}
+
+		imm = Lc4.Mem[addr] & 0x01FF
+	case 0b0001:
+		// arithmetic instructions
+		subOpCode := (word >> 3) & 0b111
+		switch subOpCode {
+		case 0b000:
+			op = OpADD
+		case 0b001:
+			op = OpMUL
+		case 0b010:
+			op = OpSUB
+		case 0b011:
+			op = OpDIV
+		default:
+			op = OpADDI
+			imm = Lc4.Mem[addr] & 0x001F
+			break parse_opcode
+		}
+
+		rd = uint8(Lc4.Mem[addr] >> 9) & 0b0111
+		rs = uint8(Lc4.Mem[addr] >> 6) & 0b0111
+		rt = uint8(Lc4.Mem[addr]) & 0b0111
+	case 0b1010:
+		// MOD or shift instructions
+		rd = uint8(Lc4.Mem[addr] >> 9) & 0b0111
+		rs = uint8(Lc4.Mem[addr] >> 6) & 0b0111
+
+		subOpCode := (word >> 4) & 0b11
+		switch subOpCode {
+		case 0b00:
+			op = OpSLL
+		case 0b01:
+			op = OpSRA
+		case 0b10:
+			op = OpSRL
+		case 0b11:
+			op = OpMOD
+			rt = uint8(Lc4.Mem[addr]) & 0b0111
+			break parse_opcode
+		}
+
+		imm = Lc4.Mem[addr] & 0x000F
+	case 0b0101:
+		// boolean instructions
+		rd = uint8(Lc4.Mem[addr] >> 9) & 0b0111
+		rs = uint8(Lc4.Mem[addr] >> 6) & 0b0111
+
+		subOpCode := (word >> 3) & 0b111
+		switch subOpCode {
+		case 0b000:
+			op = OpAND
+		case 0b001:
+			op = OpNOT
+			break parse_opcode
+		case 0b010:
+			op = OpOR
+		case 0b011:
+			op = OpXOR
+		default:
+			op = OpANDI
+			imm = Lc4.Mem[addr] & 0x001F
+			break parse_opcode
+		}
+
+		rt = uint8(Lc4.Mem[addr]) & 0b0111
+	case 0b0110:
+		// LDR
+		op = OpLDR
+		rd = uint8(Lc4.Mem[addr] >> 9) & 0b0111
+		rs = uint8(Lc4.Mem[addr] >> 6) & 0b0111
+		imm = Lc4.Mem[addr] & 0x003F
+	case 0b0111:
+		// STR
+		op = OpSTR
+		rt = uint8(Lc4.Mem[addr] >> 9) & 0b0111
+		rs = uint8(Lc4.Mem[addr] >> 6) & 0b0111
+		imm = Lc4.Mem[addr] & 0x003F
+	case 0b1001:
+		// CONST
+		rd = uint8(Lc4.Mem[addr] >> 9) & 0b0111
+		imm = Lc4.Mem[addr] & 0x01FF
+	case 0b1101:
+		// HICONST
+		rd = uint8(Lc4.Mem[addr] >> 9) & 0b0111
+		imm = Lc4.Mem[addr] & 0x00FF
+	case 0b0010:
+		// comparison instructions
+		rs = uint8(Lc4.Mem[addr] >> 9) & 0b0111
+
+		subOpCode := (word >> 7) & 0b0011
+		switch subOpCode {
+		case 0b00:
+			op = OpCMP
+			rt = uint8(Lc4.Mem[addr]) & 0b0111
+		case 0b01:
+			op = OpCMPU
+			rt = uint8(Lc4.Mem[addr]) & 0b0111
+		case 0b10:
+			op = OpCMPI
+			imm = Lc4.Mem[addr] & 0x00FF
+		case 0b11:
+			op = OpCMPIU
+			imm = Lc4.Mem[addr] & 0x00FF
+		}
+	case 0b0100:
+		// JSRR, JSR
+		subOpCode := (word >> 11) & 0b0001
+		switch subOpCode {
+		case 0b0:
+			op = OpJSRR
+			rs = uint8(Lc4.Mem[addr] >> 6) & 0b0111
+		case 0b1:
+			op = OpJSR
+			imm = Lc4.Mem[addr] & 0x07FF
+		}
+	case 0b1100:
+		// JMPR, JMP
+		subOpCode := (word >> 11) & 0b0001
+		switch subOpCode {
+		case 0b0:
+			op = OpJSRR
+			rs = uint8(Lc4.Mem[addr] >> 6) & 0b0111
+		case 0b1:
+			op = OpJSR
+			imm = Lc4.Mem[addr] & 0x07FF
+		}
+	case 0b1111:
+		// TRAP
+		imm = Lc4.Mem[addr] & 0x00FF
+	case 0b1000:
+		// RTI
+	}
+
+	return Insn{
+		OpName: op,
+		Rd: rd,
+		Rs: rs,
+		Rt: rt,
+		Imm: imm,
+		Name: name,
+	}
+}
 
 func signExtN(data uint16, nBits uint16) (signExtData uint16) {
 	// get the sign and generate a mask
@@ -113,8 +292,8 @@ func Execute() (err int) {
 		return -1
 	}
 
-	insn := Lc4.Code[Lc4.Pc]
-	switch insn.Op {
+	insn := wordToInsn(Lc4.Pc)
+	switch insn.OpName {
 		// branch instructions
 		case OpNOP:
 			// PC = PC + 1

@@ -7,7 +7,6 @@ import (
 )
 
 func InitLc4() {
-	machine.Lc4.Code = [machine.CODE_SIZE]machine.Insn{}
 	machine.Lc4.Mem = [machine.MEM_SIZE]uint16{}
 	machine.Lc4.Reg = [machine.NUM_REGS]uint16{}
 	machine.Lc4.Nzp = 0
@@ -23,10 +22,11 @@ func Breakpoint() {
 func Continue() {
 	fmt.Println("continue / c")
 	for {
-		if machine.Lc4.Code[machine.Lc4.Pc].Breakpoint {
+		// TODO store bp's in its own bit mask
+		// if machine.Lc4.Code[machine.Lc4.Pc].Breakpoint {
 			// TODO print breakpoint message
-			return
-		}
+		//	return
+		//}
 
 		if ok := Step(); !ok {
 			return
@@ -50,10 +50,11 @@ func Next() {
 		if machine.Lc4.Pc == nextPc {
 			return
 		}
-		if machine.Lc4.Code[machine.Lc4.Pc].Breakpoint {
-			// TODO print breakpoint message
-			return
-		}
+		// TODO store bp's in it's own bitmask
+		//if machine.Lc4.Code[machine.Lc4.Pc].Breakpoint {
+			//// TODO print breakpoint message
+			//return
+		//}
 
 		if ok := Step(); !ok {
 			return

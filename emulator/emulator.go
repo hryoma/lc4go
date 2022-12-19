@@ -2,9 +2,9 @@ package emulator
 
 import (
 	"fmt"
-	"strconv"
 	"github.com/hryoma/lc4go/machine"
 	"github.com/hryoma/lc4go/tokenizer"
+	"strconv"
 )
 
 const PC_INIT_VAL = 0x8200
@@ -96,16 +96,16 @@ func PrintMem(strAddr string) {
 func PrintPsr() {
 	var n, z, p uint8
 
-	if machine.Lc4.Psr & 0b100 != 0 {
+	if machine.Lc4.Psr&0b100 != 0 {
 		n = 1
 	}
-	if machine.Lc4.Psr & 0b010 != 0 {
+	if machine.Lc4.Psr&0b010 != 0 {
 		z = 1
 	}
-	if machine.Lc4.Psr & 0b001 != 0 {
+	if machine.Lc4.Psr&0b001 != 0 {
 		p = 1
 	}
-	priv := machine.Lc4.Psr & 0x8000 != 0
+	priv := machine.Lc4.Psr&0x8000 != 0
 
 	fmt.Printf("psr:\t%01b/%01b/%01b (privilege %t)\n", n, z, p, priv)
 }
@@ -114,7 +114,7 @@ func PrintReg() {
 	var regMask uint16 = 0x00FF
 
 	for i := uint16(0); i < 8; i++ {
-		if (regMask >> i) & 1 == 1 {
+		if (regMask>>i)&1 == 1 {
 			regVal := machine.Lc4.Reg[i]
 			fmt.Printf("\tR%d: %016b / 0x%04X\n", i, regVal, regVal)
 		}
@@ -136,7 +136,7 @@ func Step() (ok bool) {
 	if machine.Lc4.Pc == PC_TERM {
 		return false
 	}
-	
+
 	if err := machine.Execute(); err != 0 {
 		fmt.Println("Execution error")
 		return false
@@ -144,4 +144,3 @@ func Step() (ok bool) {
 
 	return true
 }
-

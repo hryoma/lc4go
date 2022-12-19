@@ -1,9 +1,9 @@
 package tokenizer
 
 import (
-	"testing"
-	"github.com/hryoma/lc4go/tokenizer"
 	"github.com/hryoma/lc4go/machine"
+	"github.com/hryoma/lc4go/tokenizer"
+	"testing"
 )
 
 var test_folder string = "/../test_objs/"
@@ -42,10 +42,9 @@ func TestTokenizeObjMultiplyObj(t *testing.T) {
 		t.Log("Expected:", 0x0FFB, "Actual:", machine.Lc4.Mem[5])
 		t.Fail()
 	}
-	if machine.Lc4.Mem[6] != 0x0000{
+	if machine.Lc4.Mem[6] != 0x0000 {
 		t.Log("Data block not parsed correctly")
 		t.Log("Expected:", 0x0000, "Actual:", machine.Lc4.Mem[6])
 		t.Fail()
 	}
 }
-

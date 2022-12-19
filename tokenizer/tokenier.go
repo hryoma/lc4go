@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 	// "log"
+	"github.com/hryoma/lc4go/machine"
 	"io"
 	"os"
-	"github.com/hryoma/lc4go/machine"
 )
 
 func readChar(file *os.File) (char byte, err error) {
@@ -19,7 +19,7 @@ func readChar(file *os.File) (char byte, err error) {
 
 	// get the word
 	char = buf[0]
-	return 
+	return
 }
 
 func readWord(file *os.File) (word uint16, err error) {
@@ -61,7 +61,7 @@ func parseCodeBlock(file *os.File) {
 			return
 		}
 
-		machine.Lc4.Mem[addr + i] = word;
+		machine.Lc4.Mem[addr+i] = word
 	}
 }
 
@@ -85,7 +85,7 @@ func parseDataBlock(file *os.File) {
 			return
 		}
 
-		machine.Lc4.Mem[addr + i] = word;
+		machine.Lc4.Mem[addr+i] = word
 	}
 }
 
@@ -194,4 +194,3 @@ func TokenizeObj(fileName string) {
 		}
 	}
 }
-

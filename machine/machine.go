@@ -55,7 +55,7 @@ const (
 	OpJMP
 	OpHICONST
 	OpTRAP
-	// psuedo instructions
+	// pseudo instructions
 	OpRET
 	OpLEA
 	OpLC
@@ -585,7 +585,7 @@ func Execute() (err int) {
 		// PC = R7; PSR[15] = 0
 		Lc4.Pc = Lc4.Reg[7]
 		Lc4.Psr = Lc4.Psr & 0x7FFF
-	// psuedo instructions:
+	// pseudo instructions:
 	case OpRET:
 		// return to R7
 	case OpLEA:
@@ -594,6 +594,11 @@ func Execute() (err int) {
 		// store value of constant <Label> in Rd
 	default:
 		fmt.Println("Unexpected op code")
+	}
+
+	if err == -1 {
+		fmt.Println("Arithmetic error: uintPlusInt")
+		return -1
 	}
 
 	return 0

@@ -78,8 +78,6 @@ func parseDataBlock(file *os.File) {
 		return
 	}
 
-	fmt.Println(addr, num)
-
 	// read words
 	for i := uint16(0); i < num; i++ {
 		word, err := readWord(file)

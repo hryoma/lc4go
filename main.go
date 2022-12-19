@@ -52,7 +52,7 @@ var nextCmd = &cobra.Command{
 
 var printCmd = &cobra.Command{
 	Use:     "print",
-	Short:   "Print register values, NZP bits, code lines, or content in memory",
+	Short:   "Print register values, PSR bits, code lines, or content in memory",
 	Aliases: []string{"p"},
 	Run: func(cmd *cobra.Command, args []string) {
 		emulator.Print()
@@ -73,16 +73,21 @@ var printMemCmd = &cobra.Command{
 	Short:   "Print content in memory",
 	Aliases: []string{"m"},
 	Run: func(cmd *cobra.Command, args []string) {
-		emulator.PrintMem()
+		if len(args) != 1 {
+			fmt.Println("Invalid number of arguments provided")
+			return
+		}
+
+		emulator.PrintMem(args[0])
 	},
 }
 
-var printNzpCmd = &cobra.Command{
-	Use:     "nzp",
-	Short:   "Print NZP bits",
+var printPsrCmd = &cobra.Command{
+	Use:     "psr",
+	Short:   "Print NZP and privilege bits",
 	Aliases: []string{"n"},
 	Run: func(cmd *cobra.Command, args []string) {
-		emulator.PrintNzp()
+		emulator.PrintPsr()
 	},
 }
 
@@ -125,7 +130,7 @@ var rootCmd = &cobra.Command{}
 
 func init() {
 	// initialize state
-	emulator.InitLc4()
+	emulator.Reset()
 
 	// register commands
 	rootCmd.AddCommand(breakpointCmd)
@@ -136,7 +141,7 @@ func init() {
 	rootCmd.AddCommand(printCmd)
 	printCmd.AddCommand(printCodeCmd)
 	printCmd.AddCommand(printMemCmd)
-	printCmd.AddCommand(printNzpCmd)
+	printCmd.AddCommand(printPsrCmd)
 	printCmd.AddCommand(printRegCmd)
 	rootCmd.AddCommand(resetCmd)
 	rootCmd.AddCommand(runCmd)

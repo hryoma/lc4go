@@ -5,6 +5,15 @@ import ("fmt")
 const MEM_SIZE = 65536
 const NUM_REGS = 8
 
+const USER_CODE_START = 0x0000
+const USER_CODE_END = 0x1FFF
+const USER_DATA_START = 0x2000
+const USER_DATA_END = 0x7FFF
+const OS_CODE_START = 0x8000
+const OS_CODE_END = 0x9FFF
+const OS_DATA_START = 0xA000
+const OS_DATA_END = 0xFFFF
+
 type Op int
 
 const (
@@ -345,23 +354,19 @@ func uintPlusInt(val uint16, offset int16) (res uint16, err int) {
 }
 
 func Execute() (err int) {
-	// check if PC is at the end
-	if Lc4.Pc == 0x80FF {
-		return 0
-	} else if Lc4.Pc < 0x0000 {
-		// TODO - update these with the correct values
-		// TODO - check for data/code region, privilege bit, etc.
-		// PC is out of bounds
+	if (USER_DATA_START <= Lc4.Pc) && (Lc4.Pc <= USER_DATA_END) {
 		return -1
-	} else if Lc4.Pc > 0xFFFF {
-		// PC is out of bounds
+	} else if (OS_DATA_START <= Lc4.Pc) && (Lc4.Pc <= OS_DATA_END) {
 		return -1
+	} else if (OS_CODE_START <= Lc4.Pc) && (Lc4.Pc <= OS_CODE_END) {
+		if (Lc4.Psr & 0x8000) == 0 {
+			// os code section, ran with insufficient privilege
+			return -1
+		}
 	}
 
 	insn := wordToInsn(Lc4.Pc)
 	if insn.OpName != OpNOP {
-		fmt.Printf("%s\n", insn)
-	} else {
 		fmt.Printf("%s\n", insn)
 	}
 

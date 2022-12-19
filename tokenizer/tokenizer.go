@@ -157,7 +157,7 @@ func TokenizeObj(fileName string) {
 		fmt.Println("Error getting current working directory")
 		return
 	}
-	filePath := wd + fileName
+	filePath := wd + "/" + fileName
 	file, err := os.Open(filePath)
 	if err != nil {
 		// log.Fatal(err)

@@ -436,11 +436,15 @@ func Execute() (err int) {
 			Lc4.Pc += 1
 		case OpDIV:
 			// Rd = Rs / Rt
-			calc := int16(Lc4.Reg[insn.Rs]) / int16(Lc4.Reg[insn.Rt])
-			Lc4.Reg[insn.Rd] = uint16(calc)
-			setNzp(calc)
+			if Lc4.Reg[insn.Rt] == 0 {
+				Lc4.Reg[insn.Rd] = 0
+				setNzp(0)
+			} else {
+				calc := int16(Lc4.Reg[insn.Rs]) / int16(Lc4.Reg[insn.Rt])
+				Lc4.Reg[insn.Rd] = uint16(calc)
+				setNzp(calc)
+			}
 			Lc4.Pc += 1
-			// TODO error handling for div by 0
 		case OpADDI:
 			// Rd = Rs + sext(IMM5)
 			Lc4.Reg[insn.Rd] = uint16(int16(Lc4.Reg[insn.Rs]) + insn.Imm)
@@ -448,9 +452,14 @@ func Execute() (err int) {
 			Lc4.Pc += 1
 		case OpMOD:
 			// Rd = Rs % Rt
-			calc := int16(Lc4.Reg[insn.Rs]) % int16(Lc4.Reg[insn.Rt])
-			Lc4.Reg[insn.Rd] = uint16(calc)
-			setNzp(calc)
+			if Lc4.Reg[insn.Rt] == 0 {
+				Lc4.Reg[insn.Rd] = 0
+				setNzp(0)
+			} else {
+				calc := int16(Lc4.Reg[insn.Rs]) % int16(Lc4.Reg[insn.Rt])
+				Lc4.Reg[insn.Rd] = uint16(calc)
+				setNzp(calc)
+			}
 			Lc4.Pc += 1
 			// TODO error handling for mod by 0
 		// logical instructions
@@ -487,7 +496,18 @@ func Execute() (err int) {
 			Lc4.Pc += 1
 		case OpSTR:
 			// dmem[Rs + sext(IMM6)] = Rt
-			Lc4.Mem[uint16(int16(insn.Rs) + insn.Imm)] = Lc4.Reg[insn.Rt]
+			dmemAddr := uint16(int16(insn.Rs) + insn.Imm)
+
+			// only write to data sections
+			if (USER_DATA_START <= dmemAddr) && (dmemAddr <= USER_DATA_END) {
+				Lc4.Mem[dmemAddr] = Lc4.Reg[insn.Rt]
+			} else if (OS_DATA_END <= dmemAddr) && (dmemAddr <= OS_DATA_END) {
+				// only write to os data if enough privilege
+				if (Lc4.Psr & 0x8000) == 0 {
+					Lc4.Mem[dmemAddr] = Lc4.Reg[insn.Rt]
+				}
+			}
+
 			Lc4.Pc += 1
 		case OpCONST:
 			// Rd = sext(IMM9)

@@ -11,19 +11,38 @@ const PC_INIT_VAL = 0x8200
 const PSR_INIT_VAL = 0x8002
 const PC_TERM = 0x80FF
 
-func Breakpoint() {
-	fmt.Println("breakpoint / b")
+func Breakpoint(strAddr string) {
+	if addr, err := strconv.ParseUint(strAddr, 0, 16); err == nil {
+
+		if meta, exists := machine.Lc4.Meta[uint16(addr)]; exists {
+			meta.Breakpoint = true
+		} else {
+			machine.Lc4.Meta[uint16(addr)] = machine.MemMetadata{
+				Breakpoint: true,
+			}
+		}
+		fmt.Printf("Breakpoint set at 0x%04X\n", addr)
+	} else {
+		fmt.Println("Invalid address:", strAddr)
+	}
+}
+
+func Clear() {
+	machine.Lc4.Mem = [machine.MEM_SIZE]uint16{}
+	machine.Lc4.Meta = map[uint16]machine.MemMetadata{}
+	Reset()
 }
 
 func Continue() {
 	for {
-		// TODO store bp's in its own bit mask
-		// if machine.Lc4.Code[machine.Lc4.Pc].Breakpoint {
-			// TODO print breakpoint message
-		//	return
-		//}
-
 		if ok := Step(); !ok {
+			return
+		}
+
+		// stop if breakpoint is hit
+		addr := machine.Lc4.Pc
+		if meta, exists := machine.Lc4.Meta[addr]; exists && meta.Breakpoint {
+			fmt.Printf("Hit breakpoint at 0x%04X\n", addr)
 			return
 		}
 	}
@@ -35,18 +54,19 @@ func Load(fileName string) {
 
 func Next() {
 	nextPc := machine.Lc4.Pc + 1
-	// like continue, but loop over step until pc = pc_curr + 1
 	for {
+		if ok := Step(); !ok {
+			return
+		}
+
 		if machine.Lc4.Pc == nextPc {
 			return
 		}
-		// TODO store bp's in it's own bitmask
-		//if machine.Lc4.Code[machine.Lc4.Pc].Breakpoint {
-			//// TODO print breakpoint message
-			//return
-		//}
 
-		if ok := Step(); !ok {
+		// stop if breakpoint is hit
+		addr := machine.Lc4.Pc
+		if meta, exists := machine.Lc4.Meta[addr]; exists && meta.Breakpoint {
+			fmt.Printf("Hit breakpoint at 0x%04X\n", addr)
 			return
 		}
 	}
@@ -65,8 +85,6 @@ func PrintCode() {
 }
 
 func PrintMem(strAddr string) {
-	fmt.Println("print / p -m")
-
 	if addr, err := strconv.ParseUint(strAddr, 0, 16); err == nil {
 		data := machine.Lc4.Mem[addr]
 		fmt.Printf("0x%04X:\t0b%016b / 0x%04X\n", addr, data, data)
@@ -104,28 +122,23 @@ func PrintReg() {
 }
 
 func Run() {
-	// TODO reset machine
+	Reset()
 	Continue()
 }
 
 func Reset() {
-	machine.Lc4.Mem = [machine.MEM_SIZE]uint16{}
 	machine.Lc4.Reg = [machine.NUM_REGS]uint16{}
-	machine.Lc4.Nzp = 0
 	machine.Lc4.Pc = PC_INIT_VAL
 	machine.Lc4.Psr = PSR_INIT_VAL
-	machine.Lc4.Labels = map[string]uint16{}
 }
 
 func Step() (ok bool) {
-	// TODO add check to see if pc is at end
 	if machine.Lc4.Pc == PC_TERM {
 		return false
 	}
-	// then execute once
-	err := machine.Execute()
-	if err != 0 {
-		fmt.Println("execute error")
+	
+	if err := machine.Execute(); err != 0 {
+		fmt.Println("Execution error")
 		return false
 	}
 

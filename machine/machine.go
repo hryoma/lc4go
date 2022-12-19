@@ -111,13 +111,17 @@ type Insn struct {
 	Rt			uint8
 	Imm			int16
 	Name		string
-	Breakpoint	bool
 }
 
 func (insn Insn) String() string {
 	// data
 	// OpName: Rd, Rs, Rt, Imm
 	return fmt.Sprintf("%016b\n%s: R%d, R%d, R%d, %d", insn.Data, insn.OpName, insn.Rd, insn.Rs, insn.Rt, insn.Imm)
+}
+
+type MemMetadata struct {
+	Label		string
+	Breakpoint	bool
 }
 
 type Machine struct {
@@ -127,6 +131,7 @@ type Machine struct {
 	Psr		uint16
 	Pc		uint16
 	Labels	map[string]uint16
+	Meta	map[uint16]MemMetadata
 }
 
 var Lc4 Machine
@@ -366,10 +371,6 @@ func Execute() (err int) {
 	}
 
 	insn := wordToInsn(Lc4.Pc)
-	if insn.OpName != OpNOP {
-		fmt.Printf("%s\n", insn)
-	}
-
 	switch insn.OpName {
 		// branch instructions
 		case OpNOP:

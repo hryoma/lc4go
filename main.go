@@ -13,8 +13,21 @@ var breakpointCmd = &cobra.Command{
 	Short:   "Set a breakpoint in the code",
 	Aliases: []string{"b"},
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("breakpoint / b")
-		emulator.Breakpoint()
+		if len(args) != 1 {
+			fmt.Println("Invalid number of arguments provided")
+			return
+		}
+
+		emulator.Breakpoint(args[0])
+	},
+}
+
+var clearCmd = &cobra.Command{
+	Use:     "clear",
+	Short:   "Clear all states, memory, values",
+	Aliases: []string{"cl"},
+	Run: func(cmd *cobra.Command, args []string) {
+		emulator.Clear()
 	},
 }
 
@@ -111,7 +124,7 @@ var runCmd = &cobra.Command{
 
 var resetCmd = &cobra.Command{
 	Use:   "reset",
-	Short: "Reset all values to the initial state",
+	Short: "Reset all values to initial state without clearing memory",
 	Run: func(cmd *cobra.Command, args []string) {
 		emulator.Reset()
 	},
@@ -130,10 +143,11 @@ var rootCmd = &cobra.Command{}
 
 func init() {
 	// initialize state
-	emulator.Reset()
+	emulator.Clear()
 
 	// register commands
 	rootCmd.AddCommand(breakpointCmd)
+	rootCmd.AddCommand(clearCmd)
 	rootCmd.AddCommand(continueCmd)
 	rootCmd.AddCommand(loadCmd)
 	loadCmd.Flags().StringP("obj", "b", "", "Input object file path")

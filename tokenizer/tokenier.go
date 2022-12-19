@@ -161,7 +161,7 @@ func TokenizeObj(fileName string) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		// log.Fatal(err)
-		fmt.Println("File not found: ", filePath)
+		fmt.Println("File not found:", filePath)
 		return
 	}
 	defer file.Close()

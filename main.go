@@ -98,7 +98,7 @@ var printMemCmd = &cobra.Command{
 var printPsrCmd = &cobra.Command{
 	Use:     "psr",
 	Short:   "Print NZP and privilege bits",
-	Aliases: []string{"n"},
+	Aliases: []string{"p"},
 	Run: func(cmd *cobra.Command, args []string) {
 		emulator.PrintPsr()
 	},
@@ -182,12 +182,9 @@ func main() {
 			break
 		}
 
-		args := strings.Fields(line)
-		if len(args) == 0 {
-			continue
+		if args := strings.Fields(line); len(args) != 0 {
+			rootCmd.SetArgs(args)
+			rootCmd.Execute()
 		}
-
-		rootCmd.SetArgs(args)
-		rootCmd.Execute()
 	}
 }
